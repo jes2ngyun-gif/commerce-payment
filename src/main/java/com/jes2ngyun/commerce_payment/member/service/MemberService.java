@@ -63,4 +63,11 @@ public class MemberService {
 
         return TokenResponse.of(accessToken);
     }
+
+    public MemberResponse getMyInfo(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        return MemberResponse.from(member);
+    }
 }
