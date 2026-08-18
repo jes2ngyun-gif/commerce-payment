@@ -2,8 +2,11 @@ package com.jes2ngyun.commerce_payment.member.service;
 
 import com.jes2ngyun.commerce_payment.common.exception.BusinessException;
 import com.jes2ngyun.commerce_payment.common.exception.ErrorCode;
+import com.jes2ngyun.commerce_payment.common.security.JwtProvider;
+import com.jes2ngyun.commerce_payment.member.dto.request.LoginRequest;
 import com.jes2ngyun.commerce_payment.member.dto.request.SignupRequest;
 import com.jes2ngyun.commerce_payment.member.dto.response.MemberResponse;
+import com.jes2ngyun.commerce_payment.member.dto.response.TokenResponse;
 import com.jes2ngyun.commerce_payment.member.entity.Member;
 import com.jes2ngyun.commerce_payment.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +21,7 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtProvider jwtProvider;
 
     @Transactional
     public MemberResponse signup(SignupRequest request) {
@@ -37,5 +41,26 @@ public class MemberService {
 
         // 3. 저장 후 DTO로 변환하여 반환
         return MemberResponse.from(memberRepository.save(member));
+    }
+
+    public TokenResponse login(LoginRequest request) {
+
+        // 1. 이메일로 회원 조회
+        Member member = memberRepository.findByEmail(request.email())
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
+
+        // 2. 비밀번호 대조
+        if (!passwordEncoder.matches(request.password(), member.getPassword())) {
+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+        }
+
+        // 3. 토큰 발급
+        String accessToken = jwtProvider.createToken(
+                member.getId(),
+                member.getEmail(),
+                member.getRole().name()
+        );
+
+        return TokenResponse.of(accessToken);
     }
 }
